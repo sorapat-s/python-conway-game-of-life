@@ -1,5 +1,6 @@
 import numpy as np
 import pygame
+import os
 pygame.font.init()
 pygame.mixer.init()
 
@@ -43,37 +44,61 @@ def draw_window():
     
     pygame.display.update()
 
+def stepBoard1(board, boardTemp):
+    for i in range(GRID_WIDTH):
+        for j in range(GRID_HEIGHT):
+            neighborSum = 0
+            for ii in range(i-1,i+2):
+                for jj in range(j-1,j+2):
+                    neighborSum += board[ii%GRID_WIDTH][jj%GRID_HEIGHT]>0
+            neighborSum -= board[i][j]>0
+            if neighborSum == alive:
+                boardTemp[i][j] = 1
+            if dieMin <= neighborSum <= dieMax and board[i][j] == 1:
+                boardTemp[i][j] = 1
+    return boardTemp
+
+def stepBoard2(board, tempBoard, sumBoard, indexList):
+    indexList = np.where(board == 1)
+    for i in range(len(indexList[0])):
+        sumBoard[(indexList[0][i]-1)%GRID_WIDTH][(indexList[1][i]-1)%GRID_HEIGHT] += 1
+        sumBoard[(indexList[0][i]-1)%GRID_WIDTH][indexList[1][i]] += 1
+        sumBoard[(indexList[0][i]-1)%GRID_WIDTH][(indexList[1][i]+1)%GRID_HEIGHT] += 1
+        sumBoard[indexList[0][i]][(indexList[1][i]-1)%GRID_HEIGHT] += 1
+        sumBoard[indexList[0][i]][(indexList[1][i]+1)%GRID_HEIGHT] += 1
+        sumBoard[(indexList[0][i]+1)%GRID_WIDTH][(indexList[1][i]-1)%GRID_HEIGHT] += 1
+        sumBoard[(indexList[0][i]+1)%GRID_WIDTH][indexList[1][i]] += 1
+        sumBoard[(indexList[0][i]+1)%GRID_WIDTH][(indexList[1][i]+1)%GRID_HEIGHT] += 1
+    indexList = np.where(sumBoard == 3)
+    for i in range(len(indexList[0])):
+        tempBoard[indexList[0][i]][indexList[1][i]] = 1
+    indexList = np.where(sumBoard == 2)
+    for i in range(len(indexList[0])):
+        if board[indexList[0][i]][indexList[1][i]] == 1:
+            tempBoard[indexList[0][i]][indexList[1][i]] = 1
+    return tempBoard
+
 def main():
     clock = pygame.time.Clock()
     run = True
-    global board, boardTemp
+    global board, tempBoard, sumBoard, indexList
     board = np.zeros([GRID_WIDTH, GRID_HEIGHT], dtype = int)
+    indexList = []
     initialBoard = [[3,5],[3,6],[3,7],[4,7],[5,6]]
     for i in range(len(initialBoard)):
         board[initialBoard[i][0]][initialBoard[i][1]] = 1
-
     while run:
         clock.tick(FPS)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 pygame.quit()
-
         draw_window()
-        boardTemp = np.zeros([GRID_WIDTH, GRID_HEIGHT], dtype = int)
-        for i in range(GRID_WIDTH):
-            for j in range(GRID_HEIGHT):
-                neighborSum = 0
-                for ii in range(i-1,i+2):
-                    for jj in range(j-1,j+2):
-                        neighborSum += board[ii%GRID_WIDTH][jj%GRID_HEIGHT]>0
-                neighborSum -= board[i][j]>0
-                if neighborSum == alive:
-                    boardTemp[i][j] = 1
-                if dieMin <= neighborSum <= dieMax and board[i][j] == 1:
-                    boardTemp[i][j] = 1
-        board = boardTemp
-        
+        tempBoard = np.zeros([GRID_WIDTH, GRID_HEIGHT], dtype = int)
+        sumBoard = np.zeros([GRID_WIDTH, GRID_HEIGHT], dtype = int)
+        indexList.clear()
+        board = stepBoard2(board, tempBoard, sumBoard, indexList)
+        # board = stepBoard1(board, tempBoard)
 
 if __name__ == "__main__":
     main()
